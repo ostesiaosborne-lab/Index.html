@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tell Tale: 6-second vibe check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E4EEDD; --grid:#BBCFB6; --card:#F4F9EF; --ink:#17233B;
+  --muted:#4B5A5A; --stylus:#D4342A; --trace:#2456A6; --amber:#E9A800;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Newsreader",Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh; color:var(--ink); font-family:var(--body); font-size:18px; line-height:1.5;
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:24px 24px;
+  padding:max(20px,env(safe-area-inset-top)) 18px max(28px,env(safe-area-inset-bottom));
+}
+main{max-width:520px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;letter-spacing:-0.02em}
+h1{font-size:clamp(46px,14vw,64px);font-weight:800}
+h2{font-size:26px;font-weight:800}
+h3{font-size:19px;font-weight:500}
+p{margin:0 0 12px}
+.tag{font-size:17px;color:var(--muted);margin-top:8px}
+.card{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:16px;margin-top:18px}
+.prompt{font-size:22px;line-height:1.3;font-weight:600}
+.prompt small{display:block;font-size:16px;font-weight:400;color:var(--muted);margin-top:8px}
+button{font-family:var(--display);font-size:18px;font-weight:500;color:var(--ink);background:var(--card);border:2px solid var(--ink);border-radius:999px;padding:12px 20px;cursor:pointer;min-height:48px}
+button:focus-visible,video:focus-visible{outline:3px solid var(--trace);outline-offset:3px}
+button.ghost:hover{background:#fff}
+.rec{display:block;margin:26px auto 6px;width:132px;height:132px;border-radius:50%;background:var(--stylus);color:#fff;border:4px solid var(--ink);font-size:20px;font-weight:800;box-shadow:0 6px 0 var(--ink);transition:transform .08s, box-shadow .08s}
+.rec:active{transform:translateY(5px);box-shadow:0 1px 0 var(--ink)}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.fine{font-size:15px;color:var(--muted)}
+.note{font-size:15px;color:var(--muted);text-align:center;margin-top:10px}
+[hidden]{display:none!important}
+
+/* recording */
+.stage{position:relative;margin-top:18px;border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:#000;aspect-ratio:3/4}
+.stage video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:120px;color:#fff;text-shadow:0 3px 0 var(--ink)}
+.timer{position:absolute;left:0;right:0;bottom:0;height:10px;background:rgba(0,0,0,.5)}
+.timer i{display:block;height:100%;width:0;background:var(--stylus)}
+.lvl{position:absolute;left:10px;top:10px;right:10px;height:8px;background:rgba(0,0,0,.45);border-radius:4px;overflow:hidden}
+.lvl i{display:block;height:100%;width:0;background:#8BE28B}
+.say{margin-top:12px;text-align:center;font-weight:600}
+
+/* result */
+.score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.score b{font-family:var(--display);font-size:92px;font-weight:800;line-height:.9;letter-spacing:-0.04em}
+.score span{font-family:var(--display);font-size:24px;font-weight:800}
+.chart{width:100%;height:270px;display:block;background:var(--card);border:2px solid var(--ink);border-radius:6px}
+.cue{padding:14px 0;border-top:1px solid var(--ink)}
+.cue:first-child{border-top:0;padding-top:0}
+.cue h3{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.cue h3 em{font-style:normal;font-size:15px;font-family:var(--body);color:var(--muted)}
+.meter{height:10px;border:2px solid var(--ink);border-radius:6px;margin:8px 0;background:#fff;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--amber)}
+.meter i.hot{background:var(--stylus)}
+.meter i.cool{background:#5FAE6B}
+.cue p{font-size:16px;margin:0;color:var(--muted)}
+.script{font-size:19px;line-height:1.5}
+mark{background:#FFE08A;padding:0 2px;border-radius:2px}
+.replay{width:100%;border:2px solid var(--ink);border-radius:6px;background:#000;margin-top:10px}
+.warn{border-left:6px solid var(--stylus)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+
+<!-- HOME -->
+<section id="home">
+  <h1>Tell Tale</h1>
+  <p class="tag">Six seconds. One statement. Get a party-game truthiness reading.</p>
+
+  <div class="card">
+    <p class="prompt" id="prompt"></p>
+    <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="ghost" id="shuffle" type="button">New prompt</button></div>
+  </div>
+
+  <button class="rec" id="recBtn" type="button" aria-label="Start a six second recording">Record</button>
+  <p class="note">Video and audio stay on this device. Nothing is uploaded.</p>
+
+  <div class="card warn">
+    <p class="fine" style="margin:0"><b>This is a game, not a lie detector.</b> No app can reliably tell lies from a few seconds of voice or body language. Never use a score to judge or accuse anyone. Only record people who know and agree.</p>
+  </div>
+  <p class="err" id="err" role="alert" style="color:var(--stylus);font-weight:600"></p>
+</section>
+
+<!-- RECORD -->
+<section id="record" hidden>
+  <h2>Say it now</h2>
+  <div class="stage">
+    <video id="live" autoplay muted playsinline></video>
+    <div class="lvl"><i id="lvl"></i></div>
+    <div class="count" id="count" hidden></div>
+    <div class="timer"><i id="bar"></i></div>
+  </div>
+  <p class="say" id="sayPrompt"></p>
+</section>
+
+<!-- RESULT -->
+<section id="result" hidden>
+  <h1 style="font-size:clamp(34px,10vw,44px)">Your reading</h1>
+  <div class="card">
+    <div class="score"><b id="scoreNum">0</b><span id="scoreLbl"></span></div>
+    <p id="scoreSub" class="fine" style="margin:8px 0 0"></p>
+  </div>
+
+  <div class="card" style="padding:12px">
+    <canvas class="chart" id="chart" role="img" aria-label="Chart of voice pitch, volume and movement over six seconds"></canvas>
+    <p class="fine" style="margin:8px 0 0">The shaded start is your baseline. Cues are measured as changes from how you sounded and moved in the first 1.5 seconds.</p>
+  </div>
+
+  <div class="card" id="cues"></div>
+
+  <div class="card" id="scriptCard" hidden>
+    <h2 style="font-size:22px;margin-bottom:8px">What we heard</h2>
+    <p class="script" id="script"></p>
+    <p class="fine" style="margin:0">Highlighted: filler words, hedges, and "trust me" phrases.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:22px">Replay</h2>
+    <video class="replay" id="replay" controls playsinline></video>
+  </div>
+
+  <div class="row">
+    <button id="again" type="button" style="background:var(--stylus);color:#fff">Go again</button>
+    <button id="share" type="button" class="ghost">Share score</button>
+  </div>
+
+  <div class="card warn">
+    <p class="fine" style="margin:0">For entertainment only. These cues (pitch, pauses, movement, word choice) are weak signals that vary from person to person. Nervous, tired, or truthful people trigger them all the time.</p>
+  </div>
+</section>
+
+</main>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const DUR = 6, BASE = 1.5;
+const prompts = [
+  "Tell us about your morning. One detail is made up.",
+  "Say where you were last Saturday night. Make one part up.",
+  "Name your favorite food. Then claim you've never eaten it.",
+  "Describe your commute. Slip in one fib.",
+  "Say something true about yourself, or fake it. Your call.",
+  "Tell us the last thing you bought and why. Bend the truth if you like."
+];
+let pIdx = Math.floor(Math.random()*prompts.length);
+function showPrompt(){ $('prompt').innerHTML = ''; const t=document.createTextNode(prompts[pIdx]); $('prompt').appendChild(t); const s=document.createElement('small'); s.textContent='Keep it to about six seconds. Talk naturally.'; $('prompt').appendChild(s); }
+showPrompt();
+$('shuffle').onclick = () => { pIdx = (pIdx+1) % prompts.length; showPrompt(); };
+
+function show(id){ ['home','record','result'].forEach(s => $(s).hidden = s!==id); window.scrollTo(0,0); }
+const clamp = (x,a=0,b=1) => Math.min(b,Math.max(a,x));
+const median = a => { if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; };
+const std = a => { if(a.length<2) return 0; const m=a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length); };
+const esc = s => s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- pitch ---------- */
+function detectPitch(buf, sr){
+  let c0=0; for(let i=0;i<buf.length;i++) c0+=buf[i]*buf[i];
+  const rms = Math.sqrt(c0/buf.length);
+  if(rms < 0.012) return {rms, f:0};
+  const minLag=Math.floor(sr/400), maxLag=Math.min(Math.floor(sr/70), buf.length>>1);
+  let best=0,bestLag=0;
+  for(let lag=minLag; lag<=maxLag; lag++){
+    let s=0; for(let i=0;i<buf.length-lag;i+=2) s+=buf[i]*buf[i+lag];
+    const c = (s*2)/c0;
+    if(c>best){best=c;bestLag=lag;}
+  }
+  return {rms, f: best>0.5 ? sr/bestLag : 0};
+}
+
+/* ---------- speech recognition ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let stream, ctx, analyser, recognizer, transcript='', blobUrl=null, lastSummary='';
+
+$('recBtn').onclick = start;
+$('again').onclick = () => { if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl=null;} show('home'); };
+
+async function start(){
+  $('err').textContent='';
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}, audio:{echoCancellation:false,noiseSuppression:false}});
+  }catch(e){
+    $('err').textContent = "Couldn't reach your camera and microphone. Allow access in your browser settings, then tap Record again.";
+    return;
+  }
+  const AC = window.AudioContext||window.webkitAudioContext;
+  ctx = new AC(); try{ await ctx.resume(); }catch(_){}
+  analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+
+  $('live').srcObject = stream;
+  $('sayPrompt').textContent = prompts[pIdx];
+  show('record');
+
+  // countdown
+  const c = $('count'); c.hidden = false;
+  for(const n of [3,2,1]){ c.textContent = n; await wait(800); }
+  c.hidden = true;
+  capture();
+}
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+
+function capture(){
+  const sr = ctx.sampleRate, buf = new Float32Array(analyser.fftSize);
+  const pitchArr=[], rmsArr=[], motArr=[];
+  // recorder
+  const chunks=[]; let mr=null;
+  try{
+    const types=['video/mp4','video/webm;codecs=vp9,opus','video/webm'];
+    const t = types.find(x=>window.MediaRecorder && MediaRecorder.isTypeSupported(x));
+    mr = t ? new MediaRecorder(stream,{mimeType:t}) : new MediaRecorder(stream);
+    mr.ondataavailable = e => e.data.size && chunks.push(e.data);
+    mr.start();
+  }catch(_){ mr=null; }
+  // speech
+  transcript='';
+  if(SR){
+    try{
+      recognizer = new SR(); recognizer.lang = navigator.language||'en-US'; recognizer.continuous = true; recognizer.interimResults = false;
+      recognizer.onresult = e => { for(let i=e.resultIndex;i<e.results.length;i++) if(e.results[i].isFinal) transcript += e.results[i][0].transcript+' '; };
+      recognizer.onerror = ()=>{};
+      recognizer.start();
+    }catch(_){ recognizer=null; }
+  }
+  // motion
+  const cv = document.createElement('canvas'); cv.width=64; cv.height=48;
+  const cx = cv.getContext('2d',{willReadFrequently:true}); let prev=null;
+  const vid = $('live');
+
+  const t0 = performance.now();
+  const bar = $('bar'), lvl = $('lvl');
+  let lastMot = 0;
+
+  const timer = setInterval(() => {
+    const t = (performance.now()-t0)/1000;
+    bar.style.width = clamp(t/DUR)*100+'%';
+    analyser.getFloatTimeDomainData(buf);
+    const p = detectPitch(buf, sr);
+    pitchArr.push({t, f:p.f}); rmsArr.push({t, v:p.rms});
+    lvl.style.width = clamp(p.rms*6)*100+'%';
+    if(t - lastMot >= 0.1){
+      lastMot = t;
+      try{
+        cx.drawImage(vid,0,0,64,48);
+        const d = cx.getImageData(0,0,64,48).data; const g = new Float32Array(64*48);
+        for(let i=0;i<g.length;i++) g[i] = (d[i*4]*0.3+d[i*4+1]*0.59+d[i*4+2]*0.11);
+        let m=0; if(prev){ for(let i=0;i<g.length;i++) m+=Math.abs(g[i]-prev[i]); m/= (g.length*255); }
+        motArr.push({t, v:m}); prev=g;
+      }catch(_){}
+    }
+    if(t >= DUR){
+      clearInterval(timer);
+      finish(mr, chunks, pitchArr, rmsArr, motArr);
+    }
+  }, 50);
+}
+
+async function finish(mr, chunks, pitchArr, rmsArr, motArr){
+  if(recognizer){ try{recognizer.stop();}catch(_){} }
+  let mime='video/webm';
+  const done = new Promise(res => { if(!mr){res();return;} mime=mr.mimeType||mime; mr.onstop=res; try{mr.stop();}catch(_){res();} });
+  await done; await wait(700);
+  stream.getTracks().forEach(t=>t.stop()); try{ctx.close();}catch(_){}
+  if(chunks.length){
+    blobUrl = URL.createObjectURL(new Blob(chunks,{type:mime}));
+    $('replay').src = blobUrl; $('replay').hidden=false;
+  } else { $('replay').hidden = true; }
+  analyze(pitchArr, rmsArr, motArr);
+}
+
+/* ---------- analysis ---------- */
+function analyze(pitchArr, rmsArr, motArr){
+  const cues = [];
+  const speechFrames = rmsArr.filter(r=>r.v>0.012);
+  const heard = speechFrames.length > 12;
+
+  // pitch
+  const voiced = pitchArr.filter(p=>p.f>0);
+  const baseP = voiced.filter(p=>p.t<BASE).map(p=>p.f);
+  const laterP = voiced.filter(p=>p.t>=BASE).map(p=>p.f);
+  let pitchLane = pitchArr.map(p=>({t:p.t, v:null}));
+  if(baseP.length>=6 && laterP.length>=10){
+    const b = median(baseP);
+    const st = pitchArr.map(p=>({t:p.t, v:p.f>0 ? 12*Math.log2(p.f/b) : null}));
+    pitchLane = st;
+    const rise = 12*Math.log2(median(laterP)/b);
+    const wob = std(st.filter(x=>x.t>=BASE && x.v!==null).map(x=>x.v));
+    const flag = clamp(Math.max(clamp(rise/3), clamp((wob-1.6)/3)*0.9));
+    cues.push({label:'Voice pitch', read: (rise>=0?'+':'')+rise.toFixed(1)+' semitones vs. your baseline, wobble '+wob.toFixed(1), flag, w:1.2,
+      note:'Voices often rise or waver under stress. Excitement and nerves do the same.'});
+  }
+
+  // pauses
+  if(heard){
+    const first = speechFrames[0].t;
+    const last = speechFrames[speechFrames.length-1].t;
+    let pauses=0, run=0;
+    for(const r of rmsArr){
+      if(r.t<first || r.t>last) continue;
+      if(r.v<=0.012){ run+=0.05; } else { if(run>=0.5) pauses++; run=0; }
+    }
+    const flag = clamp(pauses/3)*0.6 + clamp((first-0.8)/2)*0.4;
+    cues.push({label:'Pauses and delay', read: pauses+' long pause'+(pauses===1?'':'s')+', started talking after '+first.toFixed(1)+'s', flag, w:1,
+      note:'Long gaps or a slow start can mean someone is building a story. Or just thinking.'});
+  } else {
+    cues.push({label:'Pauses and delay', read:'We could not hear enough speech to measure this.', flag:0, w:0, na:true, note:'Try a quieter spot and speak up a little.'});
+  }
+
+  // motion
+  const bm = motArr.filter(m=>m.t<BASE).map(m=>m.v), lm = motArr.filter(m=>m.t>=BASE).map(m=>m.v);
+  if(bm.length>=5 && lm.length>=15){
+    const b = Math.max(0.004, bm.reduce((x,y)=>x+y,0)/bm.length), l = lm.reduce((x,y)=>x+y,0)/lm.length;
+    const ratio = l/b;
+    const fidget = clamp((ratio-1.5)/2), freeze = ratio<0.5 && b>0.008 ? clamp((0.5-ratio)/0.4) : 0;
+    const flag = Math.max(fidget, freeze);
+    const desc = ratio>1.5 ? 'more movement than your baseline' : (freeze>0 ? 'went noticeably still' : 'steady with your baseline');
+    cues.push({label:'Body movement', read: desc+' ('+ratio.toFixed(1)+'x)', flag, w:1,
+      note:'A sudden freeze or a burst of fidgeting after a calm start is the classic "shift". Plenty of honest people do it.'});
+  }
+
+  // verbal
+  const text = transcript.trim();
+  const words = text ? text.toLowerCase().match(/[a-z']+/g)||[] : [];
+  let highlighted = '';
+  if(words.length >= 6){
+    const low = text.toLowerCase();
+    const fillers=['um','uh','erm','you know','like','basically','literally'];
+    const hedges=['maybe','kind of','sort of','i think','probably','i guess','i suppose','i believe','as far as i know','pretty much'];
+    const emph=['to be honest','honestly','i swear','trust me','believe me','to tell you the truth','i promise','frankly'];
+    const count = list => list.reduce((n,p)=>n+(low.match(new RegExp('\\b'+p+'\\b','g'))||[]).length,0);
+    const nf=count(fillers), nh=count(hedges), ne=count(emph);
+    const iCount = (low.match(/\b(i|i'm|i've|i'll|i'd|me|my)\b/g)||[]).length;
+
+    cues.push({label:'Fillers and hedges', read: nf+' filler, '+nh+' hedge word'+(nh===1?'':'s')+' in '+words.length+' words', flag: clamp(((nf+nh)/words.length)/0.15), w:1,
+      note:'"Um", "kind of", "I think" can signal uncertainty about the story.'});
+    cues.push({label:'"Trust me" phrases', read: ne? ne+' found':'none', flag: clamp(ne/2), w:0.8,
+      note:'Over-selling honesty ("I swear", "honestly") is a common verbal flag.'});
+    const ir = iCount/words.length;
+    cues.push({label:'Owning the story', read:'"I" and "me" made up '+Math.round(ir*100)+'% of your words', flag: words.length>=8 ? clamp((0.06-ir)/0.06)*0.8 : 0, w:0.8,
+      note:'Some people drop first-person words when they distance themselves from a story.'});
+
+    const all=[...fillers,...hedges,...emph].sort((a,b)=>b.length-a.length);
+    highlighted = esc(text).replace(new RegExp('\\b('+all.map(p=>p.replace(/'/g,'(?:\'|&#39;)')).join('|')+')\\b','gi'), '<mark>$1</mark>');
+  }
+
+  // score
+  const active = cues.filter(c=>!c.na && c.w>0);
+  const wsum = active.reduce((a,c)=>a+c.w,0) || 1;
+  const avg = active.reduce((a,c)=>a+c.flag*c.w,0)/wsum;
+  const score = Math.round(clamp(100 - 85*avg, 5, 99));
+  let lbl, sub;
+  if(active.length<2){ lbl='Not enough to go on'; sub='We could barely hear or see you. Try again in better light and a quieter spot.'; }
+  else if(score>=75){ lbl='Reads honest'; sub='Steady voice, steady movement. Or you are just a good poker face.'; }
+  else if(score>=50){ lbl='Mixed signals'; sub='A few cues moved off your baseline. That is normal for anyone on camera.'; }
+  else { lbl='Shifty vibes'; sub='Several cues jumped at once. Or you are a nervous truth-teller. It happens a lot.'; }
+
+  render(score, lbl, sub, cues, highlighted, {pitchLane, rmsArr, motArr});
+  lastSummary = 'I got "'+lbl+'" ('+score+'/100) on Tell Tale, a 6-second party-game vibe check.';
+}
+
+/* ---------- render ---------- */
+function render(score, lbl, sub, cues, highlighted, lanes){
+  $('scoreNum').textContent = score; $('scoreLbl').textContent = lbl; $('scoreSub').textContent = sub;
+  $('scoreNum').style.color = score>=75 ? '#2F7D45' : score>=50 ? '#9A6B00' : 'var(--stylus)';
+  const box = $('cues'); box.innerHTML='';
+  const h = document.createElement('h2'); h.style.fontSize='22px'; h.style.marginBottom='12px'; h.textContent='Cues we checked'; box.appendChild(h);
+  cues.forEach(c=>{
+    const d=document.createElement('div'); d.className='cue';
+    const level = c.na ? '' : c.flag<0.25 ? 'calm' : c.flag<0.6 ? 'a little' : 'notable';
+    const cls = c.flag<0.25 ? 'cool' : c.flag<0.6 ? '' : 'hot';
+    d.innerHTML = '<h3><span>'+esc(c.label)+'</span><em>'+level+'</em></h3>'+
+      '<div class="meter"><i class="'+cls+'" style="width:'+(c.na?0:Math.max(4,Math.round(c.flag*100)))+'%"></i></div>'+
+      '<p><b>'+esc(c.read)+'.</b> '+esc(c.note)+'</p>';
+    box.appendChild(d);
+  });
+  if(!SR){
+    const p=document.createElement('p'); p.className='fine'; p.style.marginTop='12px'; p.textContent='Word-choice cues need speech recognition, which this browser does not offer. Try Chrome or Safari for the full reading.'; box.appendChild(p);
+  }
+  $('scriptCard').hidden = !highlighted;
+  if(highlighted) $('script').innerHTML = highlighted;
+  show('result');
+  requestAnimationFrame(()=>drawChart(lanes));
+}
+
+function drawChart(L){
+  const cv=$('chart'), dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight;
+  cv.width=W*dpr; cv.height=H*dpr; const g=cv.getContext('2d'); g.scale(dpr,dpr);
+  const padL=10, padR=10, top=8, laneH=(H-top-8)/3;
+  const X = t => padL + (t/DUR)*(W-padL-padR);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const lanes = [
+    {name:'Pitch', color:'#2456A6', pts:L.pitchLane.map(p=>({t:p.t, v:p.v===null?null:clamp(p.v/8,-1,1)})), mid:true},
+    {name:'Volume', color:'#17233B', pts:L.rmsArr.map(p=>({t:p.t, v:clamp(p.v*5)})), mid:false},
+    {name:'Movement', color:'#D4342A', pts:L.motArr.map(p=>({t:p.t, v:clamp(p.v*18)})), mid:false}
+  ];
+  function paint(prog){
+    g.clearRect(0,0,W,H);
+    // baseline band
+    g.fillStyle='rgba(36,86,166,.10)'; g.fillRect(X(0),0,X(BASE)-X(0),H);
+    g.strokeStyle='#17233B'; g.lineWidth=1;
+    lanes.forEach((ln,i)=>{
+      const y0 = top + i*laneH, yb = y0+laneH-8, yt = y0+16;
+      g.globalAlpha=.25; g.beginPath(); g.moveTo(padL,yb); g.lineTo(W-padR,yb); g.stroke(); g.globalAlpha=1;
+      g.fillStyle='#4B5A5A'; g.font='600 13px '+getComputedStyle(document.body).getPropertyValue('--display'); g.fillText(ln.name, padL+4, y0+13);
+      g.strokeStyle=ln.color; g.lineWidth=2; g.lineJoin='round'; g.beginPath();
+      let pen=false;
+      ln.pts.forEach(p=>{
+        if(p.t>prog*DUR){return;}
+        if(p.v===null){pen=false;return;}
+        const y = ln.mid ? (yt+yb)/2 - p.v*((yb-yt)/2) : yb - p.v*(yb-yt);
+        const x = X(p.t);
+        if(!pen){g.moveTo(x,y);pen=true;} else g.lineTo(x,y);
+      });
+      g.stroke();
+    });
+    // stylus line
+    g.strokeStyle='#D4342A'; g.lineWidth=2; g.beginPath(); g.moveTo(X(prog*DUR),0); g.lineTo(X(prog*DUR),H); g.stroke();
+  }
+  if(reduce){ paint(1); return; }
+  const s=performance.now(), T=2200;
+  (function step(now){ const p=clamp((now-s)/T); paint(p); if(p<1) requestAnimationFrame(step); })(s);
+}
+
+$('share').onclick = async () => {
+  const data = {title:'Tell Tale', text:lastSummary};
+  try{ if(navigator.share){ await navigator.share(data); } else { await navigator.clipboard.writeText(lastSummary); $('share').textContent='Copied'; setTimeout(()=>$('share').textContent='Share score',1500); } }catch(_){}
+};
+window.addEventListener('resize', ()=>{});
+})();
+</script>
+</body>
+</html>
